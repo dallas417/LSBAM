@@ -23,7 +23,7 @@ app.use(express.json());
 // We initialize the system ONCE to load the JSON from disk.
 // This prevents lag every time you click "Simulate" on the frontend.
 console.log("Pre-loading agent population...");
-const globalAgentSystem = new AgentSystem('../data');
+const globalAgentSystem = new AgentSystem('data');
 await globalAgentSystem.loadAgents(); // Make sure loadAgents is async/await compatible
 console.log("Population ready.");
 
