@@ -1,11 +1,16 @@
 import express from 'express';
 import cors from 'cors';
+import { AgentSystem } from './agentsystem.js';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+const agentSystem = new AgentSystem('../data'); // Point to your data folder
+// Initialize agents once on startup
+agentSystem.loadAgents();
 // Seeded Random Number Generator
+
 class SeededRNG {
   constructor(seed) {
     this.seed = seed;

@@ -1,21 +1,29 @@
-import { WebSocketServer } from 'ws';
 import chalk from "chalk";
 
-console.log("Creating server");
+const asciiArt = `
+ ██╗     ███████╗██████╗  █████╗ ███╗   ███╗
+ ██║     ██╔════╝██╔══██╗██╔══██╗████╗ ████║
+ ██║     ███████╗██████╔╝███████║██╔████╔██║
+ ██║     ╚════██║██╔══██╗██╔══██║██║╚██╔╝██║
+ ███████╗███████║██████╔╝██║  ██║██║ ╚═╝ ██║
+ ╚══════╝╚══════╝╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝
+`;
 
-const wss = new WebSocketServer({ port: 8080 });
-console.log(chalk.bold.green("WebSocket server running on ws://localhost:8080"));
+// Blue gradient from light to dark
+const lines = asciiArt.split('\n').filter(line => line.trim());
+const colors = [
+  chalk.rgb(173, 216, 230), // Light blue
+  chalk.rgb(135, 206, 250), // Sky blue
+  chalk.rgb(100, 149, 237), // Cornflower blue
+  chalk.rgb(65, 105, 225),  // Royal blue
+  chalk.rgb(30, 144, 255),  // Dodger blue
+  chalk.rgb(0, 119, 190)    // Deep blue
+];
 
-wss.on("connection", (ws) => {
-  console.log(chalk.blue("Client connected"));
-
-  ws.send("Hello from server!");
-
-  ws.on("message", (msg) => {
-    console.log("Received:", msg.toString());
-  });
-
-  ws.on("close", () => {
-    console.log(chalk.yellow("Client disconnected"));
-  });
+console.log('');
+lines.forEach((line, index) => {
+  console.log(colors[index](line));
 });
+console.log('');
+console.log(chalk.bold.blue("Lightning Sheltering Behavior Assessment Model"));
+console.log(chalk.bold.green("Starting..."));
