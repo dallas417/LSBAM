@@ -190,4 +190,24 @@ export class AgentSystem {
       }
     });
   }
+
+  resetSimulationState() {
+    // Reset counters
+    this.stats = {
+      protocolA: { outdoorsMinutes: 0, struck: 0, count: 0 },
+      protocolB: { outdoorsMinutes: 0, struck: 0, count: 0 }
+    };
+    
+    // Reset individual agent status
+    this.grid.forEach(agents => {
+        agents.forEach(agent => {
+            agent.isStruck = false;
+            agent.shelterTimer = 0;
+            
+            // Re-tally the total population count
+            if (agent.protocol === 'A') this.stats.protocolA.count++;
+            else this.stats.protocolB.count++;
+        });
+    });
+  }
 }

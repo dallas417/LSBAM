@@ -1,17 +1,4 @@
-import express from 'express';
-import cors from 'cors';
-import { AgentSystem } from './agentsystem.js';
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-const agentSystem = new AgentSystem('../data'); // Point to your data folder
-// Initialize agents once on startup
-agentSystem.loadAgents();
-// Seeded Random Number Generator
-
-class SeededRNG {
+export class SeededRNG {
   constructor(seed) {
     this.seed = seed;
   }
@@ -23,7 +10,7 @@ class SeededRNG {
 }
 
 // Storm Cell
-class StormCell {
+export class StormCell {
   constructor(lat, lon, intensity, id, rng) {
     this.id = id;
     this.lat = lat;
@@ -102,7 +89,7 @@ class StormCell {
 }
 
 // Storm System
-class StormSystem {
+export class StormSystem {
   constructor(seed) {
     this.rng = new SeededRNG(seed);
     this.cells = [];
@@ -229,75 +216,3 @@ class StormSystem {
     return results;
   }
 }
-
-const simulations = new Map();
-
-// API Routes
-app.get('/api/simulate-progress/:id', (req, res) => {
-  const simId = req.params.id;
-  const seed = Date.now();
-
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-
-  const system = new StormSystem(seed);
-  const totalTicks = 288;
-
-  let tick = 0;
-  const interval = setInterval(() => {
-    if (tick >= totalTicks) {
-      clearInterval(interval);
-      res.write('data: {"done": true}\n\n');
-      res.end();
-      return;
-    }
-
-    const tickData = system.simulateTick();
-    res.write(`data: ${JSON.stringify({
-      tick: tick,
-      progress: ((tick / totalTicks) * 100).toFixed(1),
-      cells: tickData.cells.length,
-      lightning: tickData.lightning.length
-    })}\n\n`);
-
-    tick++;
-  }, 20); 
-});
-
-app.get('/api/simulation', (req, res) => {
-  const today = new Date();
-  const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
-
-  console.log(`Generating simulation with seed: ${seed}`);
-
-  const system = new StormSystem(seed);
-  const data = system.simulate24Hours();
-
-  res.json({
-    seed: seed,
-    date: today.toISOString().split('T')[0],
-    totalTicks: data.length,
-    data: data
-  });
-});
-
-app.get('/api/simulation/:seed', (req, res) => {
-  const seed = parseInt(req.params.seed);
-
-  console.log(`Generating simulation with custom seed: ${seed}`);
-
-  const system = new StormSystem(seed);
-  const data = system.simulate24Hours();
-
-  res.json({
-    seed: seed,
-    totalTicks: data.length,
-    data: data
-  });
-});
-
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Storm simulation server running on port ${PORT}`);
-});
