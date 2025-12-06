@@ -1,4 +1,5 @@
 // server.js - Interactive port selection with timeout for automated environments
+import http from 'http'; // Import Node's native HTTP module
 import chalk from "chalk";
 import readline from "readline";
 import app from './app.js';
@@ -26,12 +27,8 @@ const colors = [
   chalk.rgb(0, 119, 190)
 ];
 
-let headerDisplayed = false;
 
-// Display ASCII art function
 function displayHeader() {
-  if (headerDisplayed) return;
-  
   console.log('');
   lines.forEach((line, index) => {
     const colorFn = colors[index] || colors[colors.length - 1]; 
@@ -39,14 +36,10 @@ function displayHeader() {
   });
   console.log('');
   console.log(chalk.bold.blue("Lightning Sheltering Behavior Assessment Model"));
-  
-  headerDisplayed = true;
 }
 
-// Function to prompt user for a different port
 function promptForNewPort() {
   return new Promise((resolve, reject) => {
-    // Check if we're in an interactive terminal
     if (!process.stdin.isTTY) {
       reject(new Error('Non-interactive environment detected'));
       return;
@@ -57,7 +50,6 @@ function promptForNewPort() {
       output: process.stdout
     });
 
-    // Set timeout for automated environments
     const timeout = setTimeout(() => {
       rl.close();
       reject(new Error('Prompt timeout'));
@@ -86,27 +78,11 @@ function promptForNewPort() {
   });
 }
 
-// Function to start server on a given port
-function startServer(port, isRetry = false) {
-  const server = app.listen(port, () => {
-    // Display header only once, before showing success message
-    displayHeader();
-    
-    console.log('');
-    if (isRetry) {
-      console.log(chalk.green(`✓ Successfully started on port ${port}`));
-    } else {
-      console.log(chalk.green(`✓ LSBAM Server running on port ${port}`));
-    }
-    console.log(chalk.gray(`Waiting for simulation requests...`));
-    console.log('');
-  });
+function startServer(port) {
+  const server = http.createServer(app);
 
   server.on('error', async (err) => {
     if (err.code === 'EADDRINUSE') {
-      // Display header only once before showing error
-      displayHeader();
-      
       console.log('');
       console.log(chalk.red.bold(`✗ Error: Port ${port} is already in use!`));
       console.log(chalk.yellow(`  Another process is using this port.`));
@@ -115,10 +91,8 @@ function startServer(port, isRetry = false) {
         const newPort = await promptForNewPort();
         startServer(newPort, true);
       } catch (promptErr) {
-        // Timeout or non-interactive environment or user declined
         console.log('');
         console.log(chalk.red('Server startup failed.'));
-        console.log(chalk.gray(`  For automated environments, use: PORT=3002 node server.js`));
         console.log('');
         process.exit(1);
       }
@@ -129,7 +103,17 @@ function startServer(port, isRetry = false) {
       process.exit(1);
     }
   });
+
+  server.on('listening', () => {
+    displayHeader();
+    
+    console.log('');
+    console.log(chalk.green(`✓ LSBAM Server running on port ${port}`));
+    console.log(chalk.gray(`Waiting for simulation requests...`));
+    console.log('');
+  });
+
+  server.listen(port);
 }
 
-// Start the server
 startServer(PREFERRED_PORT);
