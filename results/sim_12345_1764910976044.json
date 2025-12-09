@@ -5,7 +5,7 @@
     "duration": "24 Hours"
   },
   "summary": {
-    "totalAgents": 500000,
+    "totalAgents": 50000,
     "totalCasualties": 0,
     "exposure": {
       "protocolA_OutdoorMins": 71140405,
