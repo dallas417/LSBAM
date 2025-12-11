@@ -1,11 +1,10 @@
-// server.js - Interactive port selection with timeout for automated environments
-import http from 'http'; // Import Node's native HTTP module
+import http from 'http';
 import chalk from "chalk";
 import readline from "readline";
 import app from './app.js';
 
 const PREFERRED_PORT = process.env.PORT || 3001;
-const PROMPT_TIMEOUT = 10000; // 10 seconds timeout for automated environments
+const PROMPT_TIMEOUT = 10000; 
 
 const asciiArt = `
  ██╗     ███████╗██████╗  █████╗ ███╗   ███╗
@@ -16,7 +15,6 @@ const asciiArt = `
  ╚══════╝╚══════╝╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝
 `;
 
-// Blue gradient logic
 const lines = asciiArt.split('\n').filter(line => line.trim());
 const colors = [
   chalk.rgb(173, 216, 230),
@@ -26,7 +24,6 @@ const colors = [
   chalk.rgb(30, 144, 255),
   chalk.rgb(0, 119, 190)
 ];
-
 
 function displayHeader() {
   console.log('');
