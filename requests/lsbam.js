@@ -44,7 +44,7 @@ function makeRequest(seed) {
 
 // Main execution
 async function run() {
-  const args = process.argv.slice(3);
+  const args = process.argv.slice(2);
   console.log(args)
   if (args.length === 0) {
     console.log('Usage: <number_of_requests> [{background}]');
