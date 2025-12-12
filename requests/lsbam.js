@@ -68,7 +68,7 @@ async function run() {
     const out = fs.openSync(logFile, 'a');
     const err = fs.openSync(logFile, 'a');
 
-    const child = spawn(process.argv[0], [process.argv[1], 'run', numRequests.toString()], {
+    const child = spawn(process.argv[0], [process.argv[1], numRequests.toString()], {
       detached: true,
       stdio: ['ignore', out, err]
     });

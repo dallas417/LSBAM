@@ -1,0 +1,1 @@
+import{j as n}from"./index-IQGmCZG8.js";function d(){return n.jsxs("div",{id:"not-found",className:"not-found-wrapper",children:[n.jsx("h1",{children:" Hmmm 🤔 "}),n.jsx("h2",{children:" This page could not be found "})]})}export{d as default};
