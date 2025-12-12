@@ -64,7 +64,7 @@ async function run() {
   // If background mode is requested, spawn a detached process
   if (runInBackground) {
     
-    const logFile = path.join(process.cwd(), `lsbam_${Date.now()}.log`);
+    const logFile = path.join(process.cwd(), `./logs/lsbam_${Date.now()}.log`);
     const out = fs.openSync(logFile, 'a');
     const err = fs.openSync(logFile, 'a');
 
