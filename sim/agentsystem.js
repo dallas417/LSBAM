@@ -43,7 +43,7 @@ export class AgentSystem {
   // 3. Load Agents and Spatial Hash them
   async loadAgents() {
     console.log("Loading 500k agents...");
-    const rawData = fs.readFileSync(path.join(this.simDataPath, 'agents.json'));
+    const rawData = fs.readFileSync(path.join("../data", 'agents.json'));
     const agentList = JSON.parse(rawData);
 
     agentList.forEach((a, index) => {

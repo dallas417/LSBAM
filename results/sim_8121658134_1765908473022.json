@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "seed": 8121658134,
+    "dateRun": "2025-12-16T18:07:53.022Z",
+    "duration": "24 Hours"
+  },
+  "summary": {
+    "totalAgents": 500000,
+    "totalCasualties": 0,
+    "exposure": {
+      "protocolA_OutdoorMins": 71183380,
+      "protocolB_OutdoorMins": 72889000
+    }
+  },
+  "stats": {
+    "protocolA": {
+      "outdoorsMinutes": 71183380,
+      "struck": 0,
+      "count": 250000
+    },
+    "protocolB": {
+      "outdoorsMinutes": 72889000,
+      "struck": 0,
+      "count": 250000
+    }
+  }
+}
