@@ -25,9 +25,9 @@ async function createAgents() {
   stream.write('[');
   
   let buffer = [];
-  const BATCH_SIZE = 500000; // Write in batches
+  const BATCH_SIZE = 50000;
   
-  for (let i = 1; i <= 23000000; i++) {
+  for (let i = 1; i <= 920000; i++) {
     const person = {
       name: createName(),
       age: createAge(),
