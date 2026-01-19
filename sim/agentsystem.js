@@ -2,7 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
 import { Worker } from 'worker_threads';
+import { fileURLToPath } from 'url';
 import os from 'os';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export class AgentSystem {
   constructor(simDataPath) {
@@ -39,7 +43,7 @@ export class AgentSystem {
     console.log(`Spawning ${workerCount} workers...`);
 
     for (let i = 0; i < workerCount; i++) {
-        const worker = new Worker('./agentsystem.worker.js');
+        const worker = new Worker(path.join(__dirname, 'agentsystem.worker.js'));
         this.workers.push(worker);
     }
 
