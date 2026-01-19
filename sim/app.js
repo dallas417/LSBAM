@@ -46,7 +46,7 @@ app.get('/api/simulation/:seed', (req, res) => {
 
 // --- THE INTEGRATION LOGIC ---
 
-function runSimulation(seed, res) {
+async function runSimulation(seed, res) { // <--- ADD async here
     console.log(`\n--- STARTING SIMULATION (Seed: ${seed}) ---`);
 
     // A. Initialize
@@ -54,7 +54,7 @@ function runSimulation(seed, res) {
     
     // Reset Agents
     if (globalAgentSystem.resetSimulationState) {
-        globalAgentSystem.resetSimulationState();
+        await globalAgentSystem.resetSimulationState(); // <--- ADD await here
     } else {
         console.warn("!! resetSimulationState() missing. Stats may be inaccurate.");
     }
@@ -70,7 +70,8 @@ function runSimulation(seed, res) {
         const lightning = tickData.lightning || [];
         const cells = tickData.cells || [];
         
-        globalAgentSystem.processTick(lightning, cells);
+        // <--- CRITICAL UPDATE: Add 'await' here --->
+        await globalAgentSystem.processTick(lightning, cells);
 
         // 2. LOGGING: Progress Update to Console
         if (i % logInterval === 0 && i > 0) {

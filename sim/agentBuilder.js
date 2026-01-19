@@ -21,13 +21,13 @@ async function verifyOutputDirectory() {
 }
 
 async function createAgents() {
-  const stream = fs.createWriteStream('../data/agents.json');
+  const stream = fs.createWriteStream(path.join(DATA_OUTPUT_DIR, 'agents.json'));
   stream.write('[');
   
   let buffer = [];
-  const BATCH_SIZE = 5000; // Write in batches
+  const BATCH_SIZE = 500000; // Write in batches
   
-  for (let i = 1; i <= 500000; i++) {
+  for (let i = 1; i <= 23000000; i++) {
     const person = {
       name: createName(),
       age: createAge(),
@@ -229,8 +229,8 @@ async function main() {
         console.log("Working directory:", process.cwd());
         console.log("Script directory:", __dirname);
         console.log("--------------------------------");
-        verifyOutputDirectory();
-        createAgents();
+        await verifyOutputDirectory();
+        await createAgents();
 }
 
 main();

@@ -5,7 +5,7 @@
   "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "start": "node sim/server.js",
+    "start": "node sim/server.js --max-old-space-size=20000 sim/server.js",
     "sim": "node requests/lsbam.js",
     "dev": "vite",
     "build": "vite build",
