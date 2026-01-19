@@ -1,4 +1,3 @@
-// agentsystem.js
 import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
@@ -33,7 +32,6 @@ export class AgentSystem {
   }
 
   async loadAgents() {
-    console.log("🚀 Starting High-Performance Stream Load (23M Agents)...");
     
     // A. Setup Workers first
     const numCPUs = os.cpus().length;
