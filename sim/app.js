@@ -71,7 +71,7 @@ async function runSimulation(seed, res) { // <--- ADD async here
         const cells = tickData.cells || [];
         
         // <--- CRITICAL UPDATE: Add 'await' here --->
-        await globalAgentSystem.processTick(lightning, cells);
+        await globalAgentSystem.processTick(lightning, cells, i);
 
         // 2. LOGGING: Progress Update to Console
         if (i % logInterval === 0 && i > 0) {

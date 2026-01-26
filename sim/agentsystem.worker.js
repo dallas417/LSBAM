@@ -1,10 +1,8 @@
-// agentsystem.worker.js
 import { parentPort } from 'worker_threads';
 
 // Approximate 1 degree of lat/lon in miles (for Florida)
 const MILES_PER_DEG_LAT = 69;
 const MILES_PER_DEG_LON = 60; 
-
 
 class AgentSystemShard {
   constructor() {
@@ -20,15 +18,12 @@ class AgentSystemShard {
 
   init(agents) {
     agents.forEach(agent => {
-      // The main thread calculates "outdoorProb" and "protocol" before sending here
-      // to keep the worker focused purely on physics.
       const managedAgent = {
         ...agent,
         shelterTimer: 0,
         isStruck: false
       };
 
-      // Add to local stats count
       if (managedAgent.protocol === 'A') this.stats.protocolA.count++;
       else this.stats.protocolB.count++;
 
@@ -47,7 +42,7 @@ class AgentSystemShard {
     return `${x},${y}`;
   }
 
-  processTick(lightningEvents) {
+  processTick(lightningEvents, timeScalar = 1.0) {
     // 1. Process Lightning Impacts
     lightningEvents.forEach(bolt => {
       const boltLat = bolt.path[0][0];
@@ -61,13 +56,14 @@ class AgentSystemShard {
         for (let y = centerY - searchRadius; y <= centerY + searchRadius; y++) {
           const key = `${x},${y}`;
           if (this.grid.has(key)) {
-            this.updateAgentsInCell(this.grid.get(key), boltLat, boltLon);
+            // NOTE: We pass timeScalar here so strike logic knows if they are outside
+            this.updateAgentsInCell(this.grid.get(key), boltLat, boltLon, timeScalar);
           }
         }
       }
     });
 
-    // 2. Accumulate Time Stats (The heavy loop)
+    // 2. Accumulate Time Stats
     this.grid.forEach(agents => {
       for (let i = 0; i < agents.length; i++) {
         const agent = agents[i];
@@ -77,17 +73,16 @@ class AgentSystemShard {
         if (agent.shelterTimer > 0) agent.shelterTimer -= 5;
 
         let isSheltering = false;
-
         if (agent.protocol === 'A') {
             isSheltering = agent.shelterTimer > 0;
-        } else {
-            // Dynamic/Protocol B logic assumption: 
-            // Only sheltering if specifically triggered by close proximity logic previously
-            // (Simplified for this shard logic)
         }
 
+        // --- DYNAMIC PROBABILITY ---
+        // Base Probability (Job/Hobby) * Time of Day Factor
+        const currentProb = agent.outdoorProb * timeScalar;
+
         // Rolling the dice: Are they outside?
-        if (!isSheltering && Math.random() < agent.outdoorProb) {
+        if (!isSheltering && Math.random() < currentProb) {
             if (agent.protocol === 'A') this.stats.protocolA.outdoorsMinutes += 5;
             else this.stats.protocolB.outdoorsMinutes += 5;
         }
@@ -97,7 +92,7 @@ class AgentSystemShard {
     return this.stats;
   }
 
-  updateAgentsInCell(agents, boltLat, boltLon) {
+  updateAgentsInCell(agents, boltLat, boltLon, timeScalar) {
     agents.forEach(agent => {
       if (agent.isStruck) return;
 
@@ -113,14 +108,17 @@ class AgentSystemShard {
       // --- CALCULATE STRIKE ---
       let isOutside = false;
       
+      // Calculate current probability based on time of day
+      const currentProb = agent.outdoorProb * timeScalar;
+
       if (agent.protocol === 'A') {
         if (agent.shelterTimer <= 0) {
-            isOutside = Math.random() < agent.outdoorProb;
+            isOutside = Math.random() < currentProb;
         }
       } else {
         // Protocol B: Outside unless storm is overhead (> 2 miles away = outside)
         if (distMiles > 2) {
-            isOutside = Math.random() < agent.outdoorProb;
+            isOutside = Math.random() < currentProb;
         }
       }
 
@@ -155,20 +153,27 @@ class AgentSystemShard {
 // --- WORKER MESSAGE HANDLER ---
 const system = new AgentSystemShard();
 
-let agents = [];
-
 parentPort.on('message', (msg) => {
-    if (msg.type === 'ADD_BATCH') {
-        // Efficiently add new agents to this worker's local memory
-        agents.push(...msg.agents);
-    }
+    try {
+        if (msg.type === 'ADD_BATCH') {
+            system.init(msg.agents);
+        }
 
-    if (msg.type === 'INIT_FINALIZE') {
-        parentPort.postMessage({ type: 'INIT_DONE' });
-    }
+        if (msg.type === 'INIT_FINALIZE') {
+            parentPort.postMessage({ type: 'INIT_DONE' });
+        }
 
-    if (msg.type === 'TICK') {
-        const stats = processInternalTick(msg.lightningEvents);
-        parentPort.postMessage({ type: 'TICK_DONE', stats });
+        if (msg.type === 'RESET') {
+            system.reset();
+            parentPort.postMessage({ type: 'RESET_DONE' });
+        }
+
+        if (msg.type === 'TICK') {
+            // Extract timeScalar (default to 1.0 if missing)
+            const stats = system.processTick(msg.lightningEvents, msg.timeScalar || 1.0);
+            parentPort.postMessage({ type: 'TICK_DONE', stats });
+        }
+    } catch (error) {
+        console.error("Worker Error:", error);
     }
 });
