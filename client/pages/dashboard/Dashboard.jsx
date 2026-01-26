@@ -14,10 +14,12 @@ export default function Dashboard() {
     const [currentTick, setCurrentTick] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [errorMsg, setErrorMsg] = useState(null); 
     const [playbackSpeed, setPlaybackSpeed] = useState(100);
     
-    // NEW: State for the seed input
+    // Inputs
     const [seedInput, setSeedInput] = useState('12345'); 
+    const [portInput, setPortInput] = useState('3001');
 
     // --- Helpers for Radar Visualization ---
     const getRadarColors = (intensity) => {
@@ -36,7 +38,6 @@ export default function Dashboard() {
         if (intensity < 0.9) return [colors.yellow, colors.orange, colors.red];
         return [colors.orange, colors.red, colors.purple];
     };
-
 
     // --- Map Initialization ---
     useEffect(() => {
@@ -69,7 +70,6 @@ export default function Dashboard() {
         };
     }, []);
 
-
     // --- Render Logic ---
     const renderTick = useCallback((tickData) => {
         if (!mapInstanceRef.current || !stormLayerRef.current) return;
@@ -77,70 +77,61 @@ export default function Dashboard() {
         stormLayerRef.current.clearLayers();
         lightningLayerRef.current.clearLayers();
 
-        tickData.cells.forEach(cell => {
+        // FIX: Safe access to handle different JSON structures
+        // Prioritizes direct access (new format), falls back to nested (old format), then empty array
+        const cells = tickData.cells || (tickData.weather && tickData.weather.cells) || [];
+        const lightning = tickData.lightning || (tickData.weather && tickData.weather.lightning) || [];
+
+        cells.forEach(cell => {
             const center = [cell.lat, cell.lon];
             const baseRadiusMeters = cell.radius * 1000; 
             const colors = getRadarColors(cell.intensity);
 
-            // Outer Shield
-            L.circle(center, {
-                radius: baseRadiusMeters * 1.2, 
-                stroke: false,
-                fillColor: colors[0],
-                fillOpacity: 1, 
-                pane: 'radarPane',
-                interactive: false 
-            }).addTo(stormLayerRef.current);
-
-            // Middle Band
-            L.circle(center, {
-                radius: baseRadiusMeters * 0.7,
-                stroke: false,
-                fillColor: colors[1],
-                fillOpacity: 1,
-                pane: 'radarPane',
-                interactive: false
-            }).addTo(stormLayerRef.current);
-
-             // Inner Core
-            L.circle(center, {
-                radius: baseRadiusMeters * 0.3,
-                stroke: false,
-                fillColor: colors[2],
-                fillOpacity: 1,
-                pane: 'radarPane',
-                interactive: false
-            }).addTo(stormLayerRef.current);
+            L.circle(center, { radius: baseRadiusMeters * 1.2, stroke: false, fillColor: colors[0], fillOpacity: 1, pane: 'radarPane', interactive: false }).addTo(stormLayerRef.current);
+            L.circle(center, { radius: baseRadiusMeters * 0.7, stroke: false, fillColor: colors[1], fillOpacity: 1, pane: 'radarPane', interactive: false }).addTo(stormLayerRef.current);
+            L.circle(center, { radius: baseRadiusMeters * 0.3, stroke: false, fillColor: colors[2], fillOpacity: 1, pane: 'radarPane', interactive: false }).addTo(stormLayerRef.current);
         });
 
-        tickData.lightning.forEach(strike => {
-            L.polyline(strike.path, {
-                color: '#FFFFFF',
-                weight: 3,
-                opacity: 1,
-                pane: 'lightningPane'
-            }).addTo(lightningLayerRef.current);
+        lightning.forEach(strike => {
+            L.polyline(strike.path, { color: '#FFFFFF', weight: 3, opacity: 1, pane: 'lightningPane' }).addTo(lightningLayerRef.current);
         });
     }, []);
 
-
-    // --- Fetch Data (Refactored) ---
-    // Defined outside useEffect so we can call it from the button
-    const fetchSimulation = async (seedToUse) => {
+    // --- Fetch Data ---
+    const fetchSimulation = async (seedToUse, portToUse) => {
         setLoading(true);
-        setIsPlaying(false); // Stop playback while loading
+        setErrorMsg(null);
+        setSimData(null);
+        setIsPlaying(false);
+        
+        const baseUrl = `http://localhost:${portToUse}`;
+        const url = `${baseUrl}/api/simulation/${seedToUse}`;
+        
+        console.log(`Looking up simulation: ${url}`);
+
         try {
-            // NEW: Use the dynamic seed passed to the function
-            const res = await fetch(`https://testing.warn.live/api/simulation/${seedToUse}`);
+            const res = await fetch(url);
             
-            if (!res.ok) throw new Error(res.statusText);
+            if (res.status === 404) {
+                throw new Error("Simulation not found.");
+            }
+            if (!res.ok) {
+                throw new Error(`Server Error: ${res.statusText}`);
+            }
             
             const json = await res.json();
+            
+            if (!json || !json.data) {
+                throw new Error("Simulation data is null or invalid.");
+            }
+
             setSimData(json.data);
-            setCurrentTick(0); // Reset time to 0
-            setIsPlaying(true); // Auto-start
+            setCurrentTick(0); 
+            setIsPlaying(true); 
+            
         } catch (err) {
-            console.error("Fetch failed:", err);
+            console.error("Lookup failed:", err);
+            setErrorMsg(err.message);
         } finally {
             setLoading(false);
         }
@@ -148,10 +139,11 @@ export default function Dashboard() {
 
     // Initial Load
     useEffect(() => {
-        fetchSimulation(seedInput);
+        if(seedInput && portInput) {
+            fetchSimulation(seedInput, portInput);
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Only run once on mount
-
+    }, []); 
 
     // --- Animation Loop ---
     useEffect(() => {
@@ -187,30 +179,55 @@ export default function Dashboard() {
                     Lightning Simulation ⚡
                 </h3>
                 
-                {/* NEW: Seed Input Section */}
-                <div style={{marginBottom: '15px', display: 'flex', gap: '8px', alignItems: 'center'}}>
-                    <input 
-                        type="number" 
-                        value={seedInput}
-                        onChange={(e) => setSeedInput(e.target.value)}
-                        placeholder="Seed #"
-                        style={{
-                            background: '#222', border: '1px solid #555', color: 'white', 
-                            padding: '6px', borderRadius: '4px', width: '80px'
-                        }}
-                    />
+                {/* Inputs */}
+                <div style={{marginBottom: '15px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap'}}>
+                   <div style={{display:'flex', flexDirection:'column', gap:'2px'}}>
+                        <label style={{fontSize:'0.7em', color:'#aaa'}}>Seed</label>
+                        <input 
+                            type="number" 
+                            value={seedInput}
+                            onChange={(e) => setSeedInput(e.target.value)}
+                            placeholder="Seed"
+                            style={inputStyle}
+                        />
+                   </div>
+                   <div style={{display:'flex', flexDirection:'column', gap:'2px'}}>
+                        <label style={{fontSize:'0.7em', color:'#aaa'}}>Port</label>
+                        <input 
+                            type="number" 
+                            value={portInput}
+                            onChange={(e) => setPortInput(e.target.value)}
+                            placeholder="Port"
+                            style={{...inputStyle, width: '60px'}}
+                        />
+                   </div>
+                    
                     <button 
-                        onClick={() => fetchSimulation(seedInput)} 
+                        onClick={() => fetchSimulation(seedInput, portInput)} 
                         disabled={loading}
-                        style={{...btnStyle, background: loading ? '#555' : '#007BFF', border: 'none'}}
+                        style={{
+                            ...btnStyle, 
+                            marginTop: '14px',
+                            background: loading ? '#555' : '#007BFF', 
+                            border: 'none',
+                            flex: '0 0 auto'
+                        }}
                     >
-                        {loading ? '...' : 'Load'}
+                        {loading ? '...' : 'Search'}
                     </button>
                 </div>
 
-                {loading && <div style={{color: '#00BFFF', marginBottom: '10px'}}>Generating Forecast...</div>}
+                {/* Status Messages */}
+                {loading && <div style={{color: '#00BFFF', marginBottom: '10px'}}>Searching local results...</div>}
                 
-                {!loading && simData && (
+                {errorMsg && (
+                    <div style={{color: '#ff4444', marginBottom: '10px', fontSize: '0.9em', border: '1px solid #ff4444', padding: '8px', borderRadius: '4px', background:'rgba(50,0,0,0.5)'}}>
+                        ⚠ {errorMsg}
+                    </div>
+                )}
+                
+                {/* Playback Controls */}
+                {!loading && !errorMsg && simData && (
                     <div>
                         <div style={{marginBottom: '10px', fontSize: '1.1em', fontFamily: 'monospace'}}>
                             T+ {Math.floor((currentTick * 5) / 60).toString().padStart(2, '0')}:
@@ -244,6 +261,15 @@ export default function Dashboard() {
         </div>
     );
 }
+
+const inputStyle = {
+    background: '#222', 
+    border: '1px solid #555', 
+    color: 'white', 
+    padding: '6px', 
+    borderRadius: '4px', 
+    width: '80px'
+};
 
 const btnStyle = {
     cursor: 'pointer', 

@@ -15,7 +15,7 @@ function makeRequest(seed) {
       hostname: 'localhost',
       port: 3001,
       path: `/api/simulation/${seed}`,
-      method: 'GET'
+      method: 'POST' // <--- CHANGED: Uses POST to trigger generation
     };
 
     const req = http.request(options, (res) => {
@@ -45,7 +45,7 @@ function makeRequest(seed) {
 // Main execution
 async function run() {
   const args = process.argv.slice(2);
-  console.log(args)
+  
   if (args.length === 0) {
     console.log('Usage: <number_of_requests> [{background}]');
     console.log('Example: 5 * Will simulate 5 runs');
@@ -65,6 +65,12 @@ async function run() {
   if (runInBackground) {
     
     const logFile = path.join(process.cwd(), `./logs/lsbam_${Date.now()}.log`);
+    // Ensure logs directory exists
+    const logDir = path.dirname(logFile);
+    if (!fs.existsSync(logDir)) {
+        fs.mkdirSync(logDir, { recursive: true });
+    }
+
     const out = fs.openSync(logFile, 'a');
     const err = fs.openSync(logFile, 'a');
 
@@ -90,7 +96,9 @@ async function run() {
     try {
       const result = await makeRequest(seed);
       console.log(`  ✓ Status: ${result.statusCode}`);
-      console.log(`  Response: ${result.data.substring(0, 100)}${result.data.length > 100 ? '...' : ''}`);
+      // Truncate response for cleaner logs
+      const preview = result.data.length > 100 ? result.data.substring(0, 100) + '...' : result.data;
+      console.log(`  Response: ${preview}`);
     } catch (error) {
       console.error(`  ✗ Error: ${error.error}`);
     }
